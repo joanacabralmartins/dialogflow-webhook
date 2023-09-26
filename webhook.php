@@ -38,9 +38,8 @@ switch ($intent) {
             $validationErrors = array_map(function ($error) {
                 return implode(', ', $error);
             }, $responseData['data']);
-        
-            $fulfillmentText = 'Erros de validação: ' . implode(', ', $validationErrors) 
-                . ' Vamos tentar novamente?';
+
+            $fulfillmentText = 'Erros de validação: ' . implode(', ', $validationErrors) . ' Vamos tentar novamente?';
         } else {
             $fulfillmentText = 'Cadastro realizado!';
         }
@@ -52,11 +51,48 @@ switch ($intent) {
         $response = file_get_contents($url);
 
         if ($response) {
-            $status_atestado = 'Status do atestado: ' . json_decode($response, true);
-            $fulfillmentText = $status_atestado;
+            $atestados = json_decode($response, true);
+
+            if (!empty($atestados)) {
+                $fulfillmentText = 'Informações do(s) seu(s) atestado(s):';
+
+                foreach ($atestados as $atestado) {
+                    $motivo = $atestado['motivo'];
+                    $status = $atestado['status'];
+
+                    $fulfillmentText .= " Motivo: $motivo, Status: $status;";
+                }
+            } else {
+                $fulfillmentText = 'Não foram encontrados atestados para o CPF informado.';
+            }
         } else {
-            $fulfillmentText = 'Desculpe, ocorreu um erro ao verificar o status do atestado.';
+            $fulfillmentText = 'Desculpe, ocorreu um erro ao verificar o status dos atestados.';
         }
+        break;
+
+    case 'Whatsapp Media - fallback':
+        $receivedData = json_encode($requestData, JSON_PRETTY_PRINT);
+
+        // Especifique o caminho para o arquivo de log
+        $logFilePath = 'log.txt';
+
+        // Abra o arquivo de log em modo de escrita (append)
+        if ($fileHandle = fopen($logFilePath, 'a')) {
+            // Formate a mensagem de log com data e hora
+            $logMessage = '[' . date('Y-m-d H:i:s') . "] Informações recebidas:\n" . $receivedData . "\n\n";
+
+            // Escreva a mensagem no arquivo de log
+            fwrite($fileHandle, $logMessage);
+
+            // Feche o arquivo de log
+            fclose($fileHandle);
+        } else {
+            // Se não for possível abrir o arquivo de log, você pode lidar com isso aqui
+            $fulfillmentText = 'Desculpe, ocorreu um erro ao registrar as informações recebidas.';
+        }
+
+        // Defina uma resposta ou mensagem de confirmação
+        $fulfillmentText = 'As informações recebidas foram registradas em um log.';
         break;
 
     case 'enviar.atestado':
